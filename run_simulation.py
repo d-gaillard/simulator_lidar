@@ -17,6 +17,7 @@ import numpy as np
 import matplotlib.pylab as pl
 import yaml
 from obstacle import Obstacle, CircularObstacle
+import pickle
 #from moviepy.editor import VideoClip #moviepy v. 0.2.2.11
 
 
@@ -193,6 +194,7 @@ def get_way_points_gui(environment, vehicle_poses=None):
     pl.close('all')
     fig = pl.figure()#figsize=(10, 5))  # (9,5)
     ax = fig.add_subplot(111)
+    ax.axis('equal')
     pl.title('Generate waypoints: 1) Click to start. 2) Move the mouse. \n3) Click to stop. 4) lose the gui to exit')
     ax.scatter(connected_components[:, 0], connected_components[:, 1], marker='.', c='y', edgecolor='none', alpha=0.2)  # obstacles
     if vehicle_poses is not None:
@@ -204,7 +206,7 @@ def get_way_points_gui(environment, vehicle_poses=None):
     mouse.connect()
 
     pl.show()
-
+    # print(f'the data is: {np.hstack((np.array(mouse.xs)[:, None], np.array(mouse.ys)[:, None], np.array(mouse.orientation)[:,None]))[1:]}')
     return np.hstack((np.array(mouse.xs)[:, None], np.array(mouse.ys)[:, None], np.array(mouse.orientation)[:,None]))[1:]
 
 def get_filled_txy(dist_theta, robot_pos, fov, n_reflections, max_laser_distance, unoccupied_points_per_meter=0.1, margin=0.1):
@@ -297,7 +299,7 @@ def update_text_file(text_file, data, file_format='carmen'):
     text_file.write(data)
 
 def main(env='toy1', out_fn='toy1_setting1', out_file_type = 'txyocc', save_all_data_as_npz = True, n_reflections = 360,
-         fov = 180, max_laser_distance = 12, unoccupied_points_per_meter = 0.5, num_circle_segments=100):
+         fov = 180, max_laser_distance = 12, unoccupied_points_per_meter = 0.5, num_circle_segments=100, pose_filepath=None):
     """
     :param env: name of the yaml file inside the config folder
     :param out_fn: name of the output folder - create this folder inside the output folder
@@ -321,11 +323,20 @@ def main(env='toy1', out_fn='toy1_setting1', out_file_type = 'txyocc', save_all_
 
     # Step 3: run the robot - click on various locations on the gui and then close the gui to exit
     fov = fov*np.pi/180
-    robot_poses = get_way_points_gui(environment=env) # Or, hard code: robot_poses = np.array([[0.0, 0.0, -45.0], [-90, 220, 0], [30.0, 30.0, 0], [40.0, 40.0, 0]]); robot_poses[:,2] *= np.pi/180
+    if not pose_filepath:
+        robot_poses = get_way_points_gui(environment=env) # Or, hard code: robot_poses = np.array([[0.0, 0.0, -45.0], [-90, 220, 0], [30.0, 30.0, 0], [40.0, 40.0, 0]]); robot_poses[:,2] *= np.pi/180
+    else:
+        # configured to work with ACL's CARV output
+        with open(pose_filepath, 'rb') as f:
+            robot_poses, _ = pickle.load(f)
+            robot_poses[:,2] = robot_poses[:,2] + np.pi/2 # CARV heading is defined 90 degrees counterclockwise to simulate_lidar
+            # print(robot_poses)
     np.savez(ofn + out_fn + '_robot_poses.npz', robot_poses=robot_poses)
 
     output_file_name = ofn + output_file_ext
     text_file = open(output_file_name, 'w')
+
+    print(f'processing {len(robot_poses)} robot poses')
 
     for t in range(len(robot_poses)):
         print('time = {}...'.format(t))
@@ -372,6 +383,7 @@ def main(env='toy1', out_fn='toy1_setting1', out_file_type = 'txyocc', save_all_
         ax.plot(robot_poses[:,0], robot_poses[:,1], 'k--')
         ax.set_xlim([area[0], area[1]])
         ax.set_ylim([area[2], area[3]])
+        ax.axis('equal')
         pl.tight_layout()
         pl.savefig(ofn + out_fn + '_frame_{}.png'.format(t)) #Or,
         # pl.show()
@@ -396,6 +408,7 @@ if __name__ == "__main__":
     out_fn = 'safety_setting1'# name of the output folder - create this folder inside the output folder
     out_file_type = 'carmen' # or 'txyocc'
     save_all_data_as_npz = False # True # save all data for each time step for offline use - this will require memory
+    pose_filepath = '/Users/dgaillard/Desktop/aerospace_controls_lab/learned_control/CARV/nfl_robustness_training/src/_static/datasets/unicycle/double_obstacle_aug/dataset.pkl' # None
 
     # robot configuration
     n_reflections = 360 # number of lidar beams in the 2D plane
@@ -407,4 +420,4 @@ if __name__ == "__main__":
 
     main(env = env, out_fn = out_fn, out_file_type = out_file_type, save_all_data_as_npz = save_all_data_as_npz,
          n_reflections = n_reflections, fov= fov, max_laser_distance = max_laser_distance,
-         unoccupied_points_per_meter= unoccupied_points_per_meter)
+         unoccupied_points_per_meter= unoccupied_points_per_meter, pose_filepath=pose_filepath)

@@ -128,7 +128,7 @@ class CircularObstacle():
         thetas = np.linspace(0, 2*np.pi, self.num_segments)
         seg_x = self.radius*np.cos(thetas) + centroid[0]
         seg_y = self.radius*np.sin(thetas) + centroid[1]
-        segments =  [*zip(seg_x[:-1], seg_y[:-1], seg_x[1:], seg_y[1:])]+[(seg_x[-1], seg_y[-1], seg_x[0], seg_y[0])]
+        segments =  [(seg_x[-1], seg_y[-1], seg_x[0], seg_y[0])]+[*zip(seg_x[:-1], seg_y[:-1], seg_x[1:], seg_y[1:])]
         return segments
 
     def update(self, pos=None, recycle_pos=True):
