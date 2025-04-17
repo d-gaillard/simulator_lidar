@@ -48,12 +48,10 @@ obstacles:
  - #vehicle 3 - parked
   centroid_x: 0
   centroid_y: 35
-  dx: 4
-  dy: 2
-  orientation: -30
+  radius: 4
   velocity_x: 0
   velocity_y: 0
   acc_x: 0
   acc_y: 0
-  circle: False
+  circle: True
 
