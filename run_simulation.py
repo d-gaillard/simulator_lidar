@@ -16,7 +16,7 @@ import sys
 import numpy as np
 import matplotlib.pylab as pl
 import yaml
-from obstacle import Obstacle
+from obstacle import Obstacle, CircularObstacle
 #from moviepy.editor import VideoClip #moviepy v. 0.2.2.11
 
 
@@ -251,7 +251,7 @@ def get_filled_txy(dist_theta, robot_pos, fov, n_reflections, max_laser_distance
     #sys.exit()
     return np.hstack((points, labels))
 
-def load_obstacles_config(environment):
+def load_obstacles_config(environment, num_segments=100):
     """
     :param environment: name of the yaml config file
     :return: all obstacles, area of the environment
@@ -267,9 +267,13 @@ def load_obstacles_config(environment):
         obs = yaml_data['obstacles']
         all_obstacles = []
         for i in range(len(obs)):
-            obs_i = Obstacle(centroid=[obs[i]['centroid_x'], obs[i]['centroid_y']], dx=obs[i]['dx'], dy=obs[i]['dy'],
-                            angle=obs[i]['orientation']*np.pi/180, vel=[obs[i]['velocity_x'], obs[i]['velocity_y']],
-                            acc=[obs[i]['acc_x'], obs[i]['acc_y']])
+            if not obs[i]['circle']:
+                obs_i = Obstacle(centroid=[obs[i]['centroid_x'], obs[i]['centroid_y']], dx=obs[i]['dx'], dy=obs[i]['dy'],
+                                angle=obs[i]['orientation']*np.pi/180, vel=[obs[i]['velocity_x'], obs[i]['velocity_y']],
+                                acc=[obs[i]['acc_x'], obs[i]['acc_y']])
+            else:
+                obs_i = CircularObstacle(centroid=[obs[i]['centroid_x'], obs[i]['centroid_y']], radius=obs[i]['radius'], vel=[obs[i]['velocity_x'], obs[i]['velocity_y']],
+                                acc=[obs[i]['acc_x'], obs[i]['acc_y']], num_segments=num_segments)
             all_obstacles.append(obs_i)
     return all_obstacles, area
 
@@ -293,7 +297,7 @@ def update_text_file(text_file, data, file_format='carmen'):
     text_file.write(data)
 
 def main(env='toy1', out_fn='toy1_setting1', out_file_type = 'txyocc', save_all_data_as_npz = True, n_reflections = 360,
-         fov = 180, max_laser_distance = 12, unoccupied_points_per_meter = 0.5):
+         fov = 180, max_laser_distance = 12, unoccupied_points_per_meter = 0.5, num_circle_segments=100):
     """
     :param env: name of the yaml file inside the config folder
     :param out_fn: name of the output folder - create this folder inside the output folder
@@ -313,7 +317,7 @@ def main(env='toy1', out_fn='toy1_setting1', out_file_type = 'txyocc', save_all_
         output_file_ext = out_fn + '.csv'
 
     # Step 2: set up the environment
-    all_obstacles, area = load_obstacles_config(environment=env)
+    all_obstacles, area = load_obstacles_config(environment=env, num_segments=num_circle_segments)
 
     # Step 3: run the robot - click on various locations on the gui and then close the gui to exit
     fov = fov*np.pi/180
@@ -386,10 +390,12 @@ def main(env='toy1', out_fn='toy1_setting1', out_file_type = 'txyocc', save_all_
 
 if __name__ == "__main__":
     # file configuration
-    env = 'toy1' # name of the yaml file inside the config folder
-    out_fn = 'toy1_setting1'# name of the output folder - create this folder inside the output folder
+    # env = 'toy1' # name of the yaml file inside the config folder
+    env = 'safety_test' # name of the yaml file inside the config folder
+    # out_fn = 'toy1_setting1'# name of the output folder - create this folder inside the output folder
+    out_fn = 'safety_setting1'# name of the output folder - create this folder inside the output folder
     out_file_type = 'carmen' # or 'txyocc'
-    save_all_data_as_npz = True # save all data for each time step for offline use - this will require memory
+    save_all_data_as_npz = False # True # save all data for each time step for offline use - this will require memory
 
     # robot configuration
     n_reflections = 360 # number of lidar beams in the 2D plane
